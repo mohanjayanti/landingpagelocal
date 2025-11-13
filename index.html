@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Two Buttons to Load Websites</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 40px;
+      display: grid;
+      place-items: center;
+      background: #f6f7f9;
+      color: #222;
+    }
+    .container {
+      text-align: center;
+      background: #fff;
+      padding: 24px 28px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.07);
+    }
+    h1 {
+      font-size: 20px;
+      margin: 0 0 16px;
+    }
+    p {
+      margin: 0 0 20px;
+      color: #555;
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+    }
+    button {
+      appearance: none;
+      border: 0;
+      background: #2d6cdf;
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.05s ease, box-shadow 0.2s ease, background 0.2s ease;
+      box-shadow: 0 6px 14px rgba(45,108,223,0.25);
+    }
+    button.secondary {
+      background: #4caf50;
+      box-shadow: 0 6px 14px rgba(76,175,80,0.25);
+    }
+    button:hover { filter: brightness(1.05); }
+    button:active { transform: translateY(1px); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Open a Website</h1>
+    <p>Click a button to open the Application</p>
+    <div class="actions">
+      <button type="button" onclick="openSite('https://www.brisbane.qld.gov.au')" aria-label="Open Wikipedia">
+        Open Brisbane City Council
+      </button>
+      <button type="button" class="secondary" onclick="openSite('https://bnekiosktest.netlify.app/')" aria-label="Open MDN Web Docs">
+        Open UX Test App
+      </button>
+    </div>
+  </div>
+
+  <script>
+    function openSite(url) {
+      window.location.href = url;
+    }
+  </script>
+</body>
+</html>
