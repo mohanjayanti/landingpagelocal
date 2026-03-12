@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BrightSign Face Events Consumer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #111;
+      color: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #333;
+      background: #181818;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+    header p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: #aaa;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px;
+      gap: 8px;
+    }
+    #status {
+      font-size: 13px;
+      color: #ccc;
+    }
+    #status.error {
+      color: #f99;
+    }
+    #events {
+      flex: 1;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 8px;
+      background: #050505;
+      overflow-y: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .event-line {
+      margin-bottom: 4px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .event-time {
+      color: #666;
+      margin-right: 4px;
+    }
+    .event-payload {
+      color: #ddd;
+    }
+    .event-highlight {
+      color: #ffcc66;
+    }
+    footer {
+      padding: 8px 16px;
+      border-top: 1px solid #333;
+      font-size: 12px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>BrightSign Face Events Consumer</h1>
+    <p>Listening for UDP messages on port 5000 and printing them.</p>
+  </header>
+  <main>
+    <div id="status">Initializing BrightSign datagram socket…</div>
+    <div id="events"></div>
+  </main>
+  <footer>
+    Expected payloads: JSON from the face events publisher (faceDetected, faceRemoved, faceCountChanged, …).
+  </footer>
+
+  <script>
+    (function () {
+      var statusEl = document.getElementById('status');
+      var eventsEl = document.getElementById('events');
+
+      function setStatus(msg, isError) {
+        statusEl.textContent = msg;
+        if (isError) {
+          statusEl.classList.add('error');
+        } else {
+          statusEl.classList.remove('error');
+        }
+      }
+
+      function appendEventLine(text, highlight) {
+        var div = document.createElement('div');
+        div.className = 'event-line';
+
+        var timeSpan = document.createElement('span');
+        timeSpan.className = 'event-time';
+        timeSpan.textContent = '[' + new Date().toLocaleTimeString() + ']';
+
+        var payloadSpan = document.createElement('span');
+        payloadSpan.className = 'event-payload' + (highlight ? ' event-highlight' : '');
+        payloadSpan.textContent = ' ' + text;
+
+        div.appendChild(timeSpan);
+        div.appendChild(payloadSpan);
+        eventsEl.appendChild(div);
+        eventsEl.scrollTop = eventsEl.scrollHeight;
+      }
+
+      function decodeBytes(bytes) {
+        try {
+          return String.fromCharCode.apply(null, new Uint8Array(bytes));
+        } catch (e) {
+          return '[un-decodable payload length=' + bytes.length + ']';
+        }
+      }
+
+      // Guard: only attempt to use BrightSign socket if available.
+      if (typeof BSDatagramSocket === 'undefined') {
+        setStatus('BSDatagramSocket is not defined. This page must run in a BrightSign JS environment.', true);
+        appendEventLine('No BrightSign environment detected. Listening is disabled.', true);
+        return;
+      }
+
+      try {
+        var socket = new BSDatagramSocket();
+        // Must match sender's port (publisher uses 5000 by default).
+        // BrightSign JS API uses PascalCase: BindLocalPort
+        socket.BindLocalPort(5000);
+
+        setStatus('Listening on UDP port 5000 (127.0.0.1)…', false);
+        appendEventLine('Socket bound to local port 5000.');
+
+        var messageCount = 0;
+        socket.ondatagram = function (e) {
+          messageCount += 1;
+          setStatus('Listening on port 5000 — last message at ' + new Date().toLocaleTimeString() + ' (total: ' + messageCount + ')', false);
+          appendEventLine('*** MESSAGE RECEIVED #' + messageCount + ' ***', true);
+          // Convert the received bytes back to a string
+          var raw = decodeBytes(e.getBytes());
+          appendEventLine('Raw message: ' + raw);
+
+          var parsed = null;
+          try {
+            parsed = JSON.parse(raw);
+          } catch (err) {
+            // Not JSON, keep as raw command string
+          }
+
+          if (parsed && parsed.type) {
+            appendEventLine('Parsed event type: ' + parsed.type, true);
+            if (parsed.type === 'faceDetected') {
+              appendEventLine('Faces detected: ' + parsed.count, true);
+            } else if (parsed.type === 'faceRemoved') {
+              appendEventLine('Faces removed', true);
+            } else if (parsed.type === 'faceCountChanged') {
+              appendEventLine(
+                'Count changed: ' + parsed.previousCount + ' → ' + parsed.currentCount,
+                true
+              );
+            }
+          } else {
+            // Fallback: treat as simple command string
+            if (raw === 'ACTIVATE_OVERLAY') {
+              document.body.style.backgroundColor = 'red';
+              appendEventLine('Command ACTIVATE_OVERLAY received. Overlay activated.', true);
+            }
+          }
+        };
+      } catch (err) {
+        setStatus('Failed to initialize BrightSign datagram socket: ' + (err.message || err), true);
+        appendEventLine('Error: ' + (err.message || err), true);
+      }
+    })();
+  </script>
+</body>
+</html>
+
